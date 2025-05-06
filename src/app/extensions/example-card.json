@@ -1,0 +1,12 @@
+{
+  "type": "crm-card",
+  "data": {
+    "title": "Line Items",
+    "uid": "get_started_card",
+    "location": "crm.record.tab",
+    "module": {
+      "file": "generateLineItems.jsx"
+    },
+    "objectTypes": [{ "name": "deals" }]
+  }
+}

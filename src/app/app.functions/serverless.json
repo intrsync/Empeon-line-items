@@ -1,0 +1,16 @@
+{
+  "appFunctions": {
+    "fetch-products": {
+      "file": "fetch-products.js",
+      "secrets": []
+    },
+    "create-line-items": {
+      "file": "create-line-items.js",
+      "secrets": []
+    },
+    "update-properties": {
+      "file": "update-properties.js",
+      "secrets": []
+    }
+  }
+}
