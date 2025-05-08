@@ -548,37 +548,27 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
 
       {lineItems.length > 0 ? (
         <Table bordered={false} paginated={false}>
-          <TableHead>
-            <TableRow>
-              <TableHeader>Name</TableHeader>
-              <TableHeader>Unit Cost</TableHeader>
-              <TableHeader>Quantity</TableHeader>
-              <TableHeader>Price</TableHeader>
-              <TableHeader>Frequency</TableHeader>
+        <TableHead>
+          <TableRow style={{ backgroundColor: '#2c2f66', color: 'white' }}>
+            <TableHeader>ITEM</TableHeader>
+            <TableHeader>PRICE</TableHeader>
+            <TableHeader>QTY</TableHeader>
+            <TableHeader>TOTAL</TableHeader>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {lineItems.map((item, idx) => (
+            <TableRow key={idx} style={{ backgroundColor: idx % 2 === 0 ? '#f8f9fa' : '#ffffff' }}>
+              <TableCell style={{ fontWeight: 'bold' }}>
+                {item.name}
+              </TableCell>
+              <TableCell>${parseFloat(item.unitCost).toFixed(2)}/{item.frequency.toLowerCase()}</TableCell>
+              <TableCell>{item.quantity}</TableCell>
+              <TableCell>${parseFloat(item.amount).toFixed(2)}/{item.frequency.toLowerCase()}</TableCell>
             </TableRow>
-          </TableHead>
-          <TableBody>
-            {lineItems.map((item, idx) => (
-              <TableRow key={idx}>
-                <TableCell>
-                  <CrmActionLink
-                    actionType="PREVIEW_OBJECT"
-                    actionContext={{
-                      objectTypeId: "0-7", // HubSpot Product object type ID
-                      objectId: item.productId,
-                    }}
-                  >
-                    {item.name}
-                  </CrmActionLink>
-                </TableCell>
-                <TableCell>${parseFloat(item.unitCost).toFixed(2)}</TableCell>
-                <TableCell>{item.quantity}</TableCell>
-                <TableCell>${parseFloat(item.amount).toFixed(2)}</TableCell>
-                <TableCell>{item.frequency}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+          ))}
+        </TableBody>
+      </Table>      
       ) : (
         <EmptyState
           title="Nothing here yet"
