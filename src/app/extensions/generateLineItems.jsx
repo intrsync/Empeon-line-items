@@ -549,22 +549,38 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
       {lineItems.length > 0 ? (
         <Table bordered={false} paginated={false}>
         <TableHead>
-          <TableRow style={{ backgroundColor: '#2c2f66', color: 'white' }}>
-            <TableHeader>ITEM</TableHeader>
-            <TableHeader>PRICE</TableHeader>
-            <TableHeader>QTY</TableHeader>
-            <TableHeader>TOTAL</TableHeader>
+          <TableRow style={{ backgroundColor: '#2c2f66' }}>
+            <TableHeader style={{ color: 'white' }}>ITEM</TableHeader>
+            <TableHeader style={{ color: 'white' }}>PRICE</TableHeader>
+            <TableHeader style={{ color: 'white' }}>QTY</TableHeader>
+            <TableHeader style={{ color: 'white' }}>TOTAL</TableHeader>
           </TableRow>
         </TableHead>
         <TableBody>
           {lineItems.map((item, idx) => (
             <TableRow key={idx} style={{ backgroundColor: idx % 2 === 0 ? '#f8f9fa' : '#ffffff' }}>
               <TableCell style={{ fontWeight: 'bold' }}>
-                {item.name}
+                {item.productId ? (
+                  <CrmActionLink
+                    actionType="PREVIEW_OBJECT"
+                    actionContext={{
+                      objectTypeId: "0-7", // HubSpot Product object type ID
+                      objectId: item.productId,
+                    }}
+                  >
+                    {item.name}
+                  </CrmActionLink>
+                ) : (
+                  item.name
+                )}
               </TableCell>
-              <TableCell>${parseFloat(item.unitCost).toFixed(2)}/{item.frequency.toLowerCase()}</TableCell>
+              <TableCell>
+                ${parseFloat(item.unitCost).toFixed(2)}/{item.frequency.toLowerCase()}
+              </TableCell>
               <TableCell>{item.quantity}</TableCell>
-              <TableCell>${parseFloat(item.amount).toFixed(2)}/{item.frequency.toLowerCase()}</TableCell>
+              <TableCell>
+                ${parseFloat(item.amount).toFixed(2)}/{item.frequency.toLowerCase()}
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>

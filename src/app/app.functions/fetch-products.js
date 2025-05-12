@@ -40,6 +40,7 @@ exports.main = async (context = {}) => {
       success: true,
       products: filtered.map(p => ({
         label: p.properties.name,
+        name: p.properties.name,
         value: p.properties.hs_object_id,
         price: p.properties.price,
       })),
