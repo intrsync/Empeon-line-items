@@ -39,7 +39,7 @@ const productIdMap = {
   'HR Premium': '1442524175',
   'Benefits & ACA Base Fee': '1561785517',
   'Benefits & ACA Administration': '1442553929',
-  'Advanced Benefits & ACA': '1442524175',
+  'Advanced Benefits & ACA': '22248006758',
   '1095': '1484663457',
   'W2/1099': '1484663458',
   'Garnishment': '1442560886',
@@ -54,7 +54,7 @@ const productIdMap = {
   'Scheduling': '1788055941',
   'Scheduling Base Fee': '2274030005',
   'Scheduling Per Employee': '1788055941',
-  'Scheduling Location': 'N/A',
+  'Scheduling Implementation': '2170246315',
   'Time & Attendance': '1442527620',
   'Time and Attendance Base Fee': '1442553931',
   'IVR-Set UP': '1216469367',
@@ -63,16 +63,16 @@ const productIdMap = {
   'Per check': '1702983428',
   'Base Fee': '1702983429',
   'Onboarding Per New Hire (HHA Industry)': '1442562842',
-  'Payroll Base Fee': '1561785514',
+  'Payroll Base Fee': '1561785514'
 };
 
 const productMap = {
   'Payroll': ['Payroll'],
-  'Benefits & ACA': ['Benefits & ACA Base Fee', 'Benefits & ACA Administration'],
-  'Advanced Benefits': ['Advanced Benefits & ACA'],
+  'ACA Administration': ['Benefits & ACA Base Fee', 'Benefits & ACA Administration'],
+  'Advanced Benefits': ['Benefits & ACA Base Fee' ,'Advanced Benefits & ACA'],
   'HR': ['HR Premium', 'HR Base Fee'],
-  'Scheduling': ['Scheduling', 'Scheduling Base Fee', 'Scheduling Location'],
-  'Time and Attendance': ['Time and Attendance Base Fee', 'Clock Configuration', 'Clock Hosting', 'Advanced Clock', 'Standard Clock'],
+  'Scheduling': ['Scheduling', 'Scheduling Implementation', 'Scheduling Base Fee', 'Scheduling Location'],
+  'Time and Attendance': ['Time and Attendance Base Fee', 'Time & Attendance', 'Clock Configuration', 'Clock Hosting', 'Advanced Clock', 'Standard Clock'],
   'Onboarding New Hire (HHA Industry)': ['Onboarding Per New Hire (HHA Industry)'],
   'IVR': ['IVR-Set UP', 'IVR - Per employee ($50 base fee)'],
 };
@@ -88,6 +88,9 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
   const [lineItems, setLineItems] = useState([]);
   const [properties, setProperties] = useState({});
   const [loading, setLoading] = useState(false);
+  const [productDetailsMap, setProductDetailsMap] = useState({});
+  const [productFrequencies, setProductFrequencies] = useState({});
+
 
 
   useEffect(() => {
@@ -97,21 +100,29 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
           name: 'fetch-products',
           parameters: {},
         });
-
+    
         if (res?.response?.success) {
           const prices = {};
+          const names = {};
+          const freqs = {};
+    
           res.response.products.forEach(p => {
-            prices[p.value] = parseFloat(p.price);
+            const id = p.id || p.value; // support both id/value for safety
+            prices[id] = parseFloat(p.price);
+            names[id] = p.name;
+            freqs[id] = p.frequency || 'one_time';
           });
-
+    
           setProductPrices(prices);
+          setProductDetailsMap(names);
+          setProductFrequencies(freqs); 
         } else {
           console.error('Serverless response error:', res?.response?.message);
         }
       } catch (err) {
         console.error('Serverless call failed:', err);
       }
-    }
+    }    
 
     fetchProducts();
   }, [context, runServerless]);
@@ -174,7 +185,7 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
   const crmValueMap = {
     'Payroll': 'Payroll',
     'Payroll - Per Check': 'Payroll - Per Check',
-    'Benefits & ACA': 'Benefits & ACA',
+    'ACA Administration': 'ACA Administration',
     'Advanced Benefits': 'Advanced Benefits',
     'HR': 'HR',
     'Scheduling': 'Scheduling',
@@ -207,104 +218,115 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
 
   useEffect(() => {
     const items = [];
-
-    const add = (label, unitCost, quantity, freq, productId = null) => {
-      items.push({
-        name: label,
-        unitCost,
-        quantity,
-        amount: unitCost * quantity,
-        frequency: freq,
-        productId,
-      });
+  
+    const quantityByProduct = {
+      [productIdMap['Payroll']]: numEmployees,
+      [productIdMap['Payroll Base Fee']]: 1,
+      [productIdMap['Per check']]: numEmployees,
+      [productIdMap['Base Fee']]: 1,
+      [productIdMap['1095']]: 1,
+      [productIdMap['W2/1099']]: 1,
+      [productIdMap['Additional tax filing']]: 1,
+      [productIdMap['Initial Implementation']]: Math.max(getPrice(productIdMap['Initial Implementation'], productPrices), 3000) ? 1 : 0,
+      [productIdMap['Additional Implementation']]: 1,
+      [productIdMap['Garnishment']]: 1,
+      [productIdMap['New Hire Reporting']]: 1,
+      [productIdMap['Professional Services Per Hour']]: 1,
+      [productIdMap['Benefits & ACA Base Fee']]: 1,
+      [productIdMap['Benefits & ACA Administration']]: numEmployees,
+      [productIdMap['Advanced Benefits & ACA']]: numEmployees,
+      [productIdMap['HR Premium']]: numOfficeEmployees,
+      [productIdMap['HR Base Fee']]: 1,
+      [productIdMap['Scheduling Base Fee']]: 1,
+      [productIdMap['Scheduling']]: schedulingBillType === 'per_location'
+  ? numLocations
+  : schedulingBillType === 'per_employee'
+  ? numEmployees
+  : 1,
+      [productIdMap['Scheduling Location']]: numLocations,
+      [productIdMap['Onboarding Per New Hire (HHA Industry)']]: 1,
+      [productIdMap['Time and Attendance Base Fee']]: 1,
+      [productIdMap['Clock Configuration']]: numAdvClocks + numStdClocks,
+      [productIdMap['Clock Hosting']]: numAdvClocks + numStdClocks,
+      [productIdMap['Advanced Clock']]: numAdvClocks,
+      [productIdMap['Standard Clock']]: numStdClocks,
+      [productIdMap['IVR-Set UP']]: 1,
+      [productIdMap['IVR - Per employee ($50 base fee)']]: numIvrEmployees,
     };
-
-
-    const get = (name) => getPrice(productIdMap[name], productPrices);
-
-    if (selectedProducts.includes('Payroll')) {
-      const pepmRate = get('Payroll');
-      const baseFee = get('Payroll Base Fee');
-
+  
+    const dynamicPayrollLogic = () => {
+      const items = [];
+    
       if (payrollType === 'pepm') {
-        add('Payroll PEPM', pepmRate, numEmployees, 'Monthly', productIdMap['Payroll']);
-        add('Payroll Base Fee', baseFee, 1, 'Monthly', productIdMap['Payroll Base Fee']);
+        items.push(
+          productIdMap['Payroll'],
+          productIdMap['Payroll Base Fee'],
+          productIdMap['1095'],
+          productIdMap['W2/1099'],
+          productIdMap['Garnishment'],
+          productIdMap['New Hire Reporting'],
+          productIdMap['Initial Implementation'],
+          productIdMap['Additional Implementation'],
+          productIdMap['Professional Services Per Hour'],
+          productIdMap['Additional tax filing']
+        );
+      } else if (payrollType === 'per_check') {
+        items.push(
+          productIdMap['Per check'],
+          productIdMap['Base Fee'],
+          productIdMap['1095'],
+          productIdMap['W2/1099'],
+          productIdMap['Garnishment'],
+          productIdMap['New Hire Reporting'],
+          productIdMap['Initial Implementation'],
+          productIdMap['Additional Implementation'],
+          productIdMap['Professional Services Per Hour'],
+          productIdMap['Additional tax filing']
+        );
       }
+    
+      return items;
+    };
+    
+  
+    const selectedProductIds = selectedProducts.flatMap(label => {
+      if (label === 'Payroll') return dynamicPayrollLogic();
+      return (productMap[label] || []).map(name => productIdMap[name]).filter(Boolean);
+    });
+  
+    const uniqueProductIds = [...new Set(selectedProductIds)];
+  
+    uniqueProductIds.forEach(productId => {
+      let unitCost = getPrice(productId, productPrices);
+const quantity = quantityByProduct[productId] ?? 1;
 
-      if (payrollType === 'per_check') {
-        const freqRates = { weekly: 2, biweekly: 4, semimonthly: 4, monthly: 8 };
-        const baseFees = { weekly: 50, biweekly: 100, semimonthly: 100, monthly: 200 };
+// Apply payroll frequency multiplier to Per check item
+if (productId === productIdMap['Per check'] && payrollType === 'per_check') {
+  const multiplierMap = {
+    weekly: 52,
+    biweekly: 26,
+    semimonthly: 24,
+    monthly: 12,
+  };
+  const multiplier = multiplierMap[payrollFreq.toLowerCase()] || 1;
+  unitCost = unitCost * multiplier;
+}
 
-        add(`Payroll Per Check (${payrollFreq})`, freqRates[payrollFreq], numEmployees, 'Monthly', productIdMap['Per check']);
-        add(`Payroll Base Fee (${payrollFreq})`, baseFees[payrollFreq], 1, 'Monthly', productIdMap['Base Fee']);
+      const frequency = productFrequencies[productId] || 'one_time';
+  
+      if (unitCost && quantity) {
+        items.push({
+          name: productId,
+          unitCost,
+          quantity,
+          amount: unitCost * quantity,
+          frequency,
+          productId,
+        });
       }
-
-      add('1095', get('1095'), 1, 'Yearly', productIdMap['1095']);
-      add('1095 Base Fee', get('Base Fee'), 1, 'Yearly', productIdMap['Base Fee']);
-      add('W2/1099', get('W2/1099'), 1, 'Yearly', productIdMap['W2/1099']);
-      add('W2/1099 Base Fee', get('Base Fee'), 1, 'Yearly', productIdMap['Base Fee']);
-      add('Additional Tax Filing', get('Additional tax filing'), 1, 'Yearly', productIdMap['Additional tax filing']);
-      add('Initial Implementation', Math.max(get('Initial Implementation'), 3000), 1, 'One Time', productIdMap['Initial Implementation']);
-      add('Additional Implementation', get('Additional Implementation'), 1, 'One Time', productIdMap['Additional Implementation']);
-      add('Garnishment', get('Garnishment'), 1, 'One Time', productIdMap['Garnishment']);
-      add('New Hire Reporting', get('New Hire Reporting'), 1, 'One Time', productIdMap['New Hire Reporting']);
-      add('Professional Services Per Hour', get('Professional Services Per Hour'), 1, 'One Time', productIdMap['Professional Services Per Hour']);
-    }
-
-    if (selectedProducts.includes('Benefits & ACA')) {
-      add('Benefits & ACA Base Fee', get('Benefits & ACA Base Fee'), 1, 'Monthly', productIdMap['Benefits & ACA Base Fee']);
-      add('Benefits & ACA Per Employee', get('Benefits & ACA Administration'), numEmployees, 'Monthly', productIdMap['Benefits & ACA Administration']);
-    }
-
-    if (selectedProducts.includes('Advanced Benefits')) {
-      add('Advance Benefits Base Fee', get('Benefits & ACA Base Fee'), 1, 'Monthly', productIdMap['Benefits & ACA Base Fee']);
-      add('Advance Benefits & ACA Per Employee', get('Advanced Benefits & ACA'), numEmployees, 'Monthly', productIdMap['Advanced Benefits & ACA']);
-    }
-
-    if (selectedProducts.includes('HR')) {
-      add('HR Base Fee', get('HR Base Fee'), 1, 'Monthly', productIdMap['HR Base Fee']);
-      add('HR Per Office Employee', get('HR Premium'), numOfficeEmployees, 'Monthly', productIdMap['HR Premium']);
-    }
-
-    if (selectedProducts.includes('Scheduling')) {
-      add('Scheduling Base Fee', get('Scheduling Base Fee'), 1, 'Monthly', productIdMap['Scheduling Base Fee']);
-      if (schedulingBillType === 'per_employee') {
-        add('Scheduling Per Employee', get('Scheduling'), numEmployees, 'Monthly', productIdMap['Scheduling']);
-      } else if (schedulingBillType === 'per_location') {
-        add('Scheduling Per Location', get('Scheduling Location'), numLocations, 'Monthly', productIdMap['Scheduling Location']);
-      }
-    }
-
-    if (selectedProducts.includes('Onboarding New Hire (HHA Industry)')) {
-      add('Onboarding Per New Hire (HHA Industry)', get('Onboarding Per New Hire (HHA Industry)'), 1, 'One Time', productIdMap['Onboarding Per New Hire (HHA Industry)']);
-    }
-
-    if (selectedProducts.includes('Time and Attendance')) {
-      add('Time & Attendance Base Fee', get('Time and Attendance Base Fee'), 1, 'Monthly', productIdMap['Time and Attendance Base Fee']);
-      add('Scheduling for Time & Attendance', 5, numOfficeEmployees, 'Monthly'); // No product ID for this one
-
-      if (numAdvClocks > 0 || numStdClocks > 0) {
-        add('Clock Configuration', get('Clock Configuration'), 1, 'One Time', productIdMap['Clock Configuration']);
-        add('Clock Hosting', get('Clock Hosting'), 1, 'Monthly', productIdMap['Clock Hosting']);
-      }
-
-      if (numAdvClocks > 0) {
-        add('Advanced Clocks', get('Advanced Clock'), numAdvClocks, 'One Time', productIdMap['Advanced Clock']);
-      }
-
-      if (numStdClocks > 0) {
-        add('Standard Clocks', get('Standard Clock'), numStdClocks, 'One Time', productIdMap['Standard Clock']);
-      }
-    }
-
-    if (selectedProducts.includes('IVR')) {
-      add('IVR Base Fee', 50, 1, 'Monthly'); // This is a hardcoded base fee, no HubSpot product ID
-      add('IVR Setup Fee', get('IVR-Set UP'), 1, 'One Time', productIdMap['IVR-Set UP']);
-      add('IVR Per Employee', get('IVR - Per employee ($50 base fee)'), numIvrEmployees, 'Monthly', productIdMap['IVR - Per employee ($50 base fee)']);
-    }
-
-
-
+    });
+  
+  
     setLineItems(items);
   }, [
     selectedProducts,
@@ -317,7 +339,8 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
     numIvrEmployees,
     payrollType,
     payrollFreq,
-    productPrices
+    productPrices,
+    productFrequencies
   ]);
 
   const generateLineItems = useCallback(async () => {
@@ -328,17 +351,22 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
         name: 'create-line-items',
         parameters: {
           dealId: context.crm.objectId,
-          lineItems,
+          lineItems: lineItems.map(item => ({
+            ...item,
+            name: productDetailsMap[item.productId] || 'Unnamed Product', // ✅ Ensure name is sent!
+          })),
         }
       });
+      
 
       console.log('resp', resp);
 
       sendAlert({
         title: "Line Items Generated!",
+        message: `Successfully added ${lineItems.length} item(s).`,
         type: "success",
       });
-
+      
       refreshProperties();
     } catch (error) {
       console.error('Error generating line items:', error);
@@ -356,15 +384,15 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
   return (
     <Flex direction="column" gap="medium">
       <MultiSelect
-        name="products"
-        label="Products"
-        options={productDropdownOptions}
-        value={selectedProducts}
-        onChange={(val) => {
-          const hubspotValues = val.map(p => crmValueMap[p]).filter(Boolean);
-          updatePropertyValue('line_item_products', hubspotValues.join(';'));
-        }}
-      />
+  name="products"
+  label="Products"
+  options={productDropdownOptions}
+  value={selectedProducts.filter(p => productDropdownOptions.some(opt => opt.value === p))}
+  onChange={(val) => {
+    const hubspotValues = val.map(p => crmValueMap[p]).filter(Boolean);
+    updatePropertyValue('line_item_products', hubspotValues.join(';'));
+  }}
+/>
 
       {selectedProducts.length > 0 && (
         <Tile compact>
@@ -420,7 +448,7 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
                     </>
                   )}
 
-                  {(selectedProducts.includes('Benefits & ACA') ||
+                  {(selectedProducts.includes('ACA Administration') ||
                     selectedProducts.includes('Advanced Benefits') ||
                     selectedProducts.includes('Payroll') ||
                     (selectedProducts.includes('Scheduling') && schedulingBillType === 'per_employee')) &&
@@ -568,18 +596,18 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
                       objectId: item.productId,
                     }}
                   >
-                    {item.name}
+                    {productDetailsMap[item.productId] || 'Unnamed Product'}
                   </CrmActionLink>
                 ) : (
-                  item.name
+                  productDetailsMap[item.name] || 'Unnamed Product'
                 )}
               </TableCell>
               <TableCell>
-                ${parseFloat(item.unitCost).toFixed(2)}/{item.frequency.toLowerCase()}
+                ${parseFloat(item.unitCost).toFixed(2)}/{(item.frequency === 'one_time' ? 'One Time' : item.frequency.charAt(0).toUpperCase() + item.frequency.slice(1))}
               </TableCell>
               <TableCell>{item.quantity}</TableCell>
               <TableCell>
-                ${parseFloat(item.amount).toFixed(2)}/{item.frequency.toLowerCase()}
+                ${parseFloat(item.amount).toFixed(2)}/{(item.frequency === 'one_time' ? 'One Time' : item.frequency.charAt(0).toUpperCase() + item.frequency.slice(1))}
               </TableCell>
             </TableRow>
           ))}
