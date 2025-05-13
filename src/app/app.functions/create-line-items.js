@@ -19,8 +19,10 @@ exports.main = async (context = {}) => {
         quantity: item.quantity?.toString() || '1',
         price: item.unitCost?.toString() || item.price || '0',
         hs_product_id: item.productId,
-        recurringbillingfrequency: item.frequency?.toLowerCase() || 'monthly',
         hs_pricing_model: 'flat',
+  ...(item.frequency?.toLowerCase() !== 'one_time'
+    ? { recurringbillingfrequency: item.frequency.toLowerCase() }
+    : {}),
       },
       associations: [
         {
