@@ -90,6 +90,12 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
   const [loading, setLoading] = useState(false);
   const [productDetailsMap, setProductDetailsMap] = useState({});
   const [productFrequencies, setProductFrequencies] = useState({});
+  const [products, setProducts] = useState([]);
+
+
+  useEffect(() => {
+    console.log('Products:', products);
+  }, [products]);
 
 
 
@@ -105,6 +111,11 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
           const prices = {};
           const names = {};
           const freqs = {};
+
+          setProducts(res.response.products.map(p => ({
+            ...p,
+            price: parseFloat(p.price || 0),
+        })));
     
           res.response.products.forEach(p => {
             const id = p.id || p.value; // support both id/value for safety
@@ -214,133 +225,130 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
   }, [runServerless, refreshProperties]);
 
 
+  const getProduct = (id, qty = 1, frequency) => {
+    if (!id) return null;
+  
+    let unitCost = parseFloat(productPrices[id] || 0);
+    let freq = productFrequencies[id] || 'one_time';
 
-
+     const product = products.find(p => p.id === id);
+  const excludeFromTotal = product?.exclude_from_total === 'true';
+  
+    if (frequency && id === productIdMap['Per check']) {
+      const multiplierMap = {
+        weekly: 52,
+        biweekly: 26,
+        semimonthly: 24,
+        monthly: 12,
+      };
+      const multiplier = multiplierMap[frequency.toLowerCase()] || 1;
+      unitCost *= multiplier;
+    }
+  
+    return {
+      name: id,
+      unitCost,
+      quantity: qty,
+      amount: unitCost * qty,
+      frequency: freq,
+      productId: id,
+      exclude_from_total: excludeFromTotal,
+    };
+  };
+  
   useEffect(() => {
     const items = [];
   
-    const quantityByProduct = {
-      [productIdMap['Payroll']]: numEmployees,
-      [productIdMap['Payroll Base Fee']]: 1,
-      [productIdMap['Per check']]: numEmployees,
-      [productIdMap['Base Fee']]: 1,
-      [productIdMap['1095']]: 1,
-      [productIdMap['W2/1099']]: 1,
-      [productIdMap['Additional tax filing']]: 1,
-      [productIdMap['Initial Implementation']]: Math.max(getPrice(productIdMap['Initial Implementation'], productPrices), 3000) ? 1 : 0,
-      [productIdMap['Additional Implementation']]: 1,
-      [productIdMap['Garnishment']]: 1,
-      [productIdMap['New Hire Reporting']]: 1,
-      [productIdMap['Professional Services Per Hour']]: 1,
-      [productIdMap['Benefits & ACA Base Fee']]: 1,
-      [productIdMap['Benefits & ACA Administration']]: numEmployees,
-      [productIdMap['Advanced Benefits & ACA']]: numEmployees,
-      [productIdMap['HR Premium']]: numOfficeEmployees,
-      [productIdMap['HR Base Fee']]: 1,
-      [productIdMap['Scheduling Base Fee']]: 1,
-      [productIdMap['Scheduling']]: schedulingBillType === 'per_location'
-  ? numLocations
-  : schedulingBillType === 'per_employee'
-  ? numEmployees
-  : 1,
-      [productIdMap['Scheduling Location']]: numLocations,
-      [productIdMap['Onboarding Per New Hire (HHA Industry)']]: 1,
-      [productIdMap['Time and Attendance Base Fee']]: 1,
-      [productIdMap['Clock Configuration']]: numAdvClocks + numStdClocks,
-      [productIdMap['Clock Hosting']]: numAdvClocks + numStdClocks,
-      [productIdMap['Advanced Clock']]: numAdvClocks,
-      [productIdMap['Standard Clock']]: numStdClocks,
-      [productIdMap['IVR-Set UP']]: 1,
-      [productIdMap['IVR - Per employee ($50 base fee)']]: numIvrEmployees,
-    };
+    for (const product of selectedProducts) {
+      switch (product) {
+        case 'Payroll': {
+          items.push(getProduct(productIdMap['Payroll'], numEmployees, payrollType, productPrices, productFrequencies));
+          items.push(getProduct(productIdMap['Payroll Base Fee'], 1, null, productPrices, productFrequencies));
+          items.push(getProduct(productIdMap['Per check'], numEmployees, payrollFreq, productPrices, productFrequencies));
+          items.push(getProduct(productIdMap['Base Fee'], 1, null, productPrices, productFrequencies));
+          items.push(getProduct(productIdMap['1095'], 1, null, productPrices, productFrequencies));
+          items.push(getProduct(productIdMap['W2/1099'], 1, null, productPrices, productFrequencies));
+          items.push(getProduct(productIdMap['Garnishment'], 1, null, productPrices, productFrequencies));
+          items.push(getProduct(productIdMap['New Hire Reporting'], 1, null, productPrices, productFrequencies));
+          break;
+        }
   
-    const dynamicPayrollLogic = () => {
-      const items = [];
-    
-      if (payrollType === 'pepm') {
-        items.push(
-          productIdMap['Payroll'],
-          productIdMap['Payroll Base Fee'],
-          productIdMap['1095'],
-          productIdMap['W2/1099'],
-          productIdMap['Garnishment'],
-          productIdMap['New Hire Reporting'],
-          productIdMap['Initial Implementation'],
-          productIdMap['Additional Implementation'],
-          productIdMap['Professional Services Per Hour'],
-          productIdMap['Additional tax filing']
-        );
-      } else if (payrollType === 'per_check') {
-        items.push(
-          productIdMap['Per check'],
-          productIdMap['Base Fee'],
-          productIdMap['1095'],
-          productIdMap['W2/1099'],
-          productIdMap['Garnishment'],
-          productIdMap['New Hire Reporting'],
-          productIdMap['Initial Implementation'],
-          productIdMap['Additional Implementation'],
-          productIdMap['Professional Services Per Hour'],
-          productIdMap['Additional tax filing']
-        );
+        case 'ACA Administration': {
+          items.push(getProduct(productIdMap['Benefits & ACA Base Fee'], 1, null, productPrices, productFrequencies));
+          items.push(getProduct(productIdMap['Benefits & ACA Administration'], numEmployees, null, productPrices, productFrequencies));
+          break;
+        }
+  
+        case 'Advanced Benefits': {
+          items.push(getProduct(productIdMap['Benefits & ACA Base Fee'], 1, null, productPrices, productFrequencies));
+          items.push(getProduct(productIdMap['Advanced Benefits & ACA'], numEmployees, null, productPrices, productFrequencies));
+          break;
+        }
+  
+        case 'HR': {
+          items.push(getProduct(productIdMap['HR Premium'], numOfficeEmployees, null, productPrices, productFrequencies));
+          items.push(getProduct(productIdMap['HR Base Fee'], 1, null, productPrices, productFrequencies));
+          break;
+        }
+  
+        case 'Scheduling': {
+          const schedulingQty = schedulingBillType === 'per_location'
+            ? numLocations
+            : schedulingBillType === 'per_employee'
+            ? numEmployees
+            : 1;
+  
+          items.push(getProduct(productIdMap['Scheduling Base Fee'], 1, null, productPrices, productFrequencies));
+          items.push(getProduct(productIdMap['Scheduling'], schedulingQty, null, productPrices, productFrequencies));
+          items.push(getProduct(productIdMap['Scheduling Location'], numLocations, null, productPrices, productFrequencies));
+          break;
+        }
+  
+        case 'Time and Attendance': {
+          const clockTotal = numAdvClocks + numStdClocks;
+          items.push(getProduct(productIdMap['Time and Attendance Base Fee'], 1, null, productPrices, productFrequencies));
+          items.push(getProduct(productIdMap['Clock Configuration'], clockTotal, null, productPrices, productFrequencies));
+          items.push(getProduct(productIdMap['Clock Hosting'], clockTotal, null, productPrices, productFrequencies));
+          items.push(getProduct(productIdMap['Advanced Clock'], numAdvClocks, null, productPrices, productFrequencies));
+          items.push(getProduct(productIdMap['Standard Clock'], numStdClocks, null, productPrices, productFrequencies));
+          break;
+        }
+  
+        case 'Onboarding New Hire (HHA Industry)': {
+          items.push(getProduct(productIdMap['Onboarding Per New Hire (HHA Industry)'], 1, null, productPrices, productFrequencies));
+          break;
+        }
+  
+        case 'IVR': {
+          items.push(getProduct(productIdMap['IVR-Set UP'], 1, null, productPrices, productFrequencies));
+          items.push(getProduct(productIdMap['IVR - Per employee ($50 base fee)'], numIvrEmployees, null, productPrices, productFrequencies));
+          break;
+        }
+  
+        default: {
+          const productNames = productMap[product] || [];
+          for (const name of productNames) {
+            items.push(getProduct(productIdMap[name], 1, null, productPrices, productFrequencies));
+          }
+        }
       }
-    
-      return items;
-    };
-    
+    }
   
-    const selectedProductIds = selectedProducts.flatMap(label => {
-      if (label === 'Payroll') return dynamicPayrollLogic();
-      return (productMap[label] || []).map(name => productIdMap[name]).filter(Boolean);
-    });
-  
-    const uniqueProductIds = [...new Set(selectedProductIds)];
-  
-    uniqueProductIds.forEach(productId => {
-      let unitCost = getPrice(productId, productPrices);
-const quantity = quantityByProduct[productId] ?? 1;
-
-// Apply payroll frequency multiplier to Per check item
-if (productId === productIdMap['Per check'] && payrollType === 'per_check') {
-  const multiplierMap = {
-    weekly: 52,
-    biweekly: 26,
-    semimonthly: 24,
-    monthly: 12,
-  };
-  const multiplier = multiplierMap[payrollFreq.toLowerCase()] || 1;
-  unitCost = unitCost * multiplier;
-}
-
-      const frequency = productFrequencies[productId] || 'one_time';
-  
-      if (unitCost && quantity) {
-        items.push({
-          name: productId,
-          unitCost,
-          quantity,
-          amount: unitCost * quantity,
-          frequency,
-          productId,
-        });
-      }
-    });
-  
-  
-    setLineItems(items);
+    // Filter out any nulls from invalid product IDs
+    setLineItems(items.filter(Boolean));
   }, [
     selectedProducts,
+    productPrices,
+    productFrequencies,
     numEmployees,
     numOfficeEmployees,
     numLocations,
     numAdvClocks,
     numStdClocks,
-    schedulingBillType,
     numIvrEmployees,
     payrollType,
     payrollFreq,
-    productPrices,
-    productFrequencies
+    schedulingBillType
   ]);
 
   const generateLineItems = useCallback(async () => {
@@ -353,7 +361,7 @@ if (productId === productIdMap['Per check'] && payrollType === 'per_check') {
           dealId: context.crm.objectId,
           lineItems: lineItems.map(item => ({
             ...item,
-            name: productDetailsMap[item.productId] || 'Unnamed Product', // ✅ Ensure name is sent!
+            name: productDetailsMap[item.productId] || 'Unnamed Product',
           })),
         }
       });

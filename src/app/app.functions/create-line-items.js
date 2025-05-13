@@ -8,21 +8,28 @@ exports.main = async (context = {}) => {
     accessToken: process.env['PRIVATE_APP_ACCESS_TOKEN'],
   });
 
-  if (!dealId || !Array.isArray(lineItems) || lineItems.length === 0) {
-    return { success: false, message: 'Missing dealId or lineItems.' };
-  }
-
   try {
+
+    if (!dealId || !Array.isArray(lineItems) || lineItems.length === 0) {
+      return { success: false, message: 'Missing dealId or lineItems.' };
+    }
+
+    console.log(lineItems)
+    console.log('exclude_from_total', lineItems[0].exclude_from_total)
+
+
+
     const inputs = lineItems.map((item) => ({
       properties: {
         name: item.name,
         quantity: item.quantity?.toString() || '1',
-        price: item.unitCost?.toString() || item.price || '0',
+        price: item.exclude_from_total === true ? '0' : String(item.unitCost ?? item.price ?? 0),
+        display_price: item.unitCost?.toString() || item.price || '0',
         hs_product_id: item.productId,
-        hs_pricing_model: 'flat',
-  ...(item.frequency?.toLowerCase() !== 'one_time'
-    ? { recurringbillingfrequency: item.frequency.toLowerCase() }
-    : {}),
+        //       hs_pricing_model: 'flat',
+        // ...(item.frequency?.toLowerCase() !== 'one_time'
+        //   ? { recurringbillingfrequency: item.frequency.toLowerCase() }
+        //   : {}),
       },
       associations: [
         {
@@ -30,7 +37,7 @@ exports.main = async (context = {}) => {
           types: [
             {
               associationCategory: 'HUBSPOT_DEFINED',
-              associationTypeId: 20, 
+              associationTypeId: 20,
             }
           ]
         }
