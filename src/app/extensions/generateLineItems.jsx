@@ -84,12 +84,9 @@ const productDropdownOptions = Object.keys(productMap).map(label => ({
 }));
 
 const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPropertyUpdate, refreshProperties }) => {
-  const [productPrices, setProductPrices] = useState({});
   const [lineItems, setLineItems] = useState([]);
   const [properties, setProperties] = useState({});
   const [loading, setLoading] = useState(false);
-  const [productDetailsMap, setProductDetailsMap] = useState({});
-  const [productFrequencies, setProductFrequencies] = useState({});
   const [products, setProducts] = useState([]);
 
 
@@ -108,25 +105,11 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
         });
     
         if (res?.response?.success) {
-          const prices = {};
-          const names = {};
-          const freqs = {};
 
           setProducts(res.response.products.map(p => ({
             ...p,
             price: parseFloat(p.price || 0),
-        })));
-    
-          res.response.products.forEach(p => {
-            const id = p.id || p.value; // support both id/value for safety
-            prices[id] = parseFloat(p.price);
-            names[id] = p.name;
-            freqs[id] = p.frequency || 'one_time';
-          });
-    
-          setProductPrices(prices);
-          setProductDetailsMap(names);
-          setProductFrequencies(freqs); 
+        }))); 
         } else {
           console.error('Serverless response error:', res?.response?.message);
         }
@@ -164,23 +147,6 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
       "scheduling_bill_type"
     ], (props) => setProperties((prev) => ({ ...prev, ...props })));
   }, [fetchProperties, onPropertyUpdate]);
-
-  useEffect(() => {
-    // Fetch product pricing
-    runServerless({ name: 'fetch-products', parameters: {} }).then(res => {
-      if (res?.response?.success) {
-        const prices = {};
-        res.response.products.forEach(p => {
-          prices[p.value] = parseFloat(p.price);
-        });
-        setProductPrices(prices);
-      }
-    });
-  }, [runServerless]);
-
-  const getPrice = (id, prices) => {
-    return prices[id] !== undefined ? prices[id] : 0;
-  };
 
   const selectedProducts = properties.line_item_products?.split(';') || [];
   const numEmployees = parseInt(properties.number_of_employees) || 0;
@@ -225,34 +191,31 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
   }, [runServerless, refreshProperties]);
 
 
-  const getProduct = (id, qty = 1, frequency) => {
-    if (!id) return null;
-  
-    let unitCost = parseFloat(productPrices[id] || 0);
-    let freq = productFrequencies[id] || 'one_time';
+  const getProduct = (id, qty = 1) => {
+    const product = products.find(p => p.id === id);
+    if (!product) return null;
 
-     const product = products.find(p => p.id === id);
-  const excludeFromTotal = product?.exclude_from_total === 'true';
+    let unitCost = product.price || 0;
   
-    if (frequency && id === productIdMap['Per check']) {
+    if (id === productIdMap['Per check']) {
       const multiplierMap = {
         weekly: 52,
         biweekly: 26,
         semimonthly: 24,
         monthly: 12,
       };
-      const multiplier = multiplierMap[frequency.toLowerCase()] || 1;
+      const multiplier = multiplierMap[payrollFreq] || 1;
       unitCost *= multiplier;
     }
   
     return {
-      name: id,
+      name: product.name,
       unitCost,
       quantity: qty,
       amount: unitCost * qty,
-      frequency: freq,
+      frequency: product.frequency || 'one_time',
       productId: id,
-      exclude_from_total: excludeFromTotal,
+      exclude_from_total: product.exclude_from_total || 'false',
     };
   };
   
@@ -262,32 +225,37 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
     for (const product of selectedProducts) {
       switch (product) {
         case 'Payroll': {
-          items.push(getProduct(productIdMap['Payroll'], numEmployees, payrollType, productPrices, productFrequencies));
-          items.push(getProduct(productIdMap['Payroll Base Fee'], 1, null, productPrices, productFrequencies));
-          items.push(getProduct(productIdMap['Per check'], numEmployees, payrollFreq, productPrices, productFrequencies));
-          items.push(getProduct(productIdMap['Base Fee'], 1, null, productPrices, productFrequencies));
-          items.push(getProduct(productIdMap['1095'], 1, null, productPrices, productFrequencies));
-          items.push(getProduct(productIdMap['W2/1099'], 1, null, productPrices, productFrequencies));
-          items.push(getProduct(productIdMap['Garnishment'], 1, null, productPrices, productFrequencies));
-          items.push(getProduct(productIdMap['New Hire Reporting'], 1, null, productPrices, productFrequencies));
+          if (payrollType === 'per_check') {
+            items.push(getProduct(productIdMap['Per check'], numEmployees));
+            items.push(getProduct(productIdMap['Base Fee'], 1));
+          } else {
+            items.push(getProduct(productIdMap['Payroll'], numEmployees));
+            items.push(getProduct(productIdMap['Payroll Base Fee'], 1));
+          }
+        
+          items.push(getProduct(productIdMap['1095'], 1));
+          items.push(getProduct(productIdMap['W2/1099'], 1));
+          items.push(getProduct(productIdMap['Garnishment'], 1));
+          items.push(getProduct(productIdMap['New Hire Reporting'], 1));
           break;
         }
+        
   
         case 'ACA Administration': {
-          items.push(getProduct(productIdMap['Benefits & ACA Base Fee'], 1, null, productPrices, productFrequencies));
-          items.push(getProduct(productIdMap['Benefits & ACA Administration'], numEmployees, null, productPrices, productFrequencies));
+          items.push(getProduct(productIdMap['Benefits & ACA Base Fee'], 1));
+          items.push(getProduct(productIdMap['Benefits & ACA Administration'], numEmployees));
           break;
         }
   
         case 'Advanced Benefits': {
-          items.push(getProduct(productIdMap['Benefits & ACA Base Fee'], 1, null, productPrices, productFrequencies));
-          items.push(getProduct(productIdMap['Advanced Benefits & ACA'], numEmployees, null, productPrices, productFrequencies));
+          items.push(getProduct(productIdMap['Benefits & ACA Base Fee'], 1));
+          items.push(getProduct(productIdMap['Advanced Benefits & ACA'], numEmployees));
           break;
         }
   
         case 'HR': {
-          items.push(getProduct(productIdMap['HR Premium'], numOfficeEmployees, null, productPrices, productFrequencies));
-          items.push(getProduct(productIdMap['HR Base Fee'], 1, null, productPrices, productFrequencies));
+          items.push(getProduct(productIdMap['HR Premium'], numOfficeEmployees));
+          items.push(getProduct(productIdMap['HR Base Fee'], 1));
           break;
         }
   
@@ -298,37 +266,37 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
             ? numEmployees
             : 1;
   
-          items.push(getProduct(productIdMap['Scheduling Base Fee'], 1, null, productPrices, productFrequencies));
-          items.push(getProduct(productIdMap['Scheduling'], schedulingQty, null, productPrices, productFrequencies));
-          items.push(getProduct(productIdMap['Scheduling Location'], numLocations, null, productPrices, productFrequencies));
+          items.push(getProduct(productIdMap['Scheduling Base Fee'], 1));
+          items.push(getProduct(productIdMap['Scheduling'], schedulingQty));
+          items.push(getProduct(productIdMap['Scheduling Location'], numLocations));
           break;
         }
   
         case 'Time and Attendance': {
           const clockTotal = numAdvClocks + numStdClocks;
-          items.push(getProduct(productIdMap['Time and Attendance Base Fee'], 1, null, productPrices, productFrequencies));
-          items.push(getProduct(productIdMap['Clock Configuration'], clockTotal, null, productPrices, productFrequencies));
-          items.push(getProduct(productIdMap['Clock Hosting'], clockTotal, null, productPrices, productFrequencies));
-          items.push(getProduct(productIdMap['Advanced Clock'], numAdvClocks, null, productPrices, productFrequencies));
-          items.push(getProduct(productIdMap['Standard Clock'], numStdClocks, null, productPrices, productFrequencies));
+          items.push(getProduct(productIdMap['Time and Attendance Base Fee'], 1));
+          items.push(getProduct(productIdMap['Clock Configuration'], clockTotal));
+          items.push(getProduct(productIdMap['Clock Hosting'], clockTotal));
+          items.push(getProduct(productIdMap['Advanced Clock'], numAdvClocks));
+          items.push(getProduct(productIdMap['Standard Clock'], numStdClocks));
           break;
         }
   
         case 'Onboarding New Hire (HHA Industry)': {
-          items.push(getProduct(productIdMap['Onboarding Per New Hire (HHA Industry)'], 1, null, productPrices, productFrequencies));
+          items.push(getProduct(productIdMap['Onboarding Per New Hire (HHA Industry)'], 1));
           break;
         }
   
         case 'IVR': {
-          items.push(getProduct(productIdMap['IVR-Set UP'], 1, null, productPrices, productFrequencies));
-          items.push(getProduct(productIdMap['IVR - Per employee ($50 base fee)'], numIvrEmployees, null, productPrices, productFrequencies));
+          items.push(getProduct(productIdMap['IVR-Set UP'], 1));
+          items.push(getProduct(productIdMap['IVR - Per employee ($50 base fee)'], numIvrEmployees));
           break;
         }
   
         default: {
           const productNames = productMap[product] || [];
           for (const name of productNames) {
-            items.push(getProduct(productIdMap[name], 1, null, productPrices, productFrequencies));
+            items.push(getProduct(productIdMap[name], 1));
           }
         }
       }
@@ -338,8 +306,6 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
     setLineItems(items.filter(Boolean));
   }, [
     selectedProducts,
-    productPrices,
-    productFrequencies,
     numEmployees,
     numOfficeEmployees,
     numLocations,
@@ -361,7 +327,7 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
           dealId: context.crm.objectId,
           lineItems: lineItems.map(item => ({
             ...item,
-            name: productDetailsMap[item.productId] || 'Unnamed Product',
+            name: item.name || 'Unnamed Product',
           })),
         }
       });
@@ -604,10 +570,10 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
                       objectId: item.productId,
                     }}
                   >
-                    {productDetailsMap[item.productId] || 'Unnamed Product'}
+                    {item.name || 'Unnamed Product'}
                   </CrmActionLink>
                 ) : (
-                  productDetailsMap[item.name] || 'Unnamed Product'
+                  item.name || 'Unnamed Product'
                 )}
               </TableCell>
               <TableCell>

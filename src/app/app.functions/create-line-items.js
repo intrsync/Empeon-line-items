@@ -23,7 +23,7 @@ exports.main = async (context = {}) => {
       properties: {
         name: item.name,
         quantity: item.quantity?.toString() || '1',
-        price: item.exclude_from_total === true ? '0' : String(item.unitCost ?? item.price ?? 0),
+        price: (item.exclude_from_total === true || item.exclude_from_total === 'true') ? '0' : String(item.unitCost ?? item.price ?? 0),
         display_price: item.unitCost?.toString() || item.price || '0',
         hs_product_id: item.productId,
         //       hs_pricing_model: 'flat',
