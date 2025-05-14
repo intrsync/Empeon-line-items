@@ -40,6 +40,7 @@ const productIdMap = {
   'Benefits & ACA Base Fee': '1561785517',
   'Benefits & ACA Administration': '1442553929',
   'Advanced Benefits & ACA': '22248006758',
+  'Advanced Benefits Base Fee': '23308368723',
   '1095': '1484663457',
   'W2/1099': '1484663458',
   'Garnishment': '1442560886',
@@ -248,7 +249,7 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
         }
   
         case 'Advanced Benefits': {
-          items.push(getProduct(productIdMap['Benefits & ACA Base Fee'], 1));
+          items.push(getProduct(productIdMap['Advanced Benefits Base Fee'], 1));
           items.push(getProduct(productIdMap['Advanced Benefits & ACA'], numEmployees));
           break;
         }
