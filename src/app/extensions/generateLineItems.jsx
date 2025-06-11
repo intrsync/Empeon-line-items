@@ -200,10 +200,10 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
   
     if (id === productIdMap['Per check']) {
       const multiplierMap = {
-        weekly: 52,
-        biweekly: 26,
-        semimonthly: 24,
-        monthly: 12,
+        weekly: 52, // price $2
+        biweekly: 26, // price $4
+        semimonthly: 24, // price $4
+        monthly: 12, // price $8
       };
       const multiplier = multiplierMap[payrollFreq] || 1;
       unitCost *= multiplier;
