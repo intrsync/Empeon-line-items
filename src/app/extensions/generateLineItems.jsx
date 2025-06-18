@@ -62,6 +62,10 @@ const productIdMap = {
   'IVR - Per employee ($50 base fee)': '1216473728',
   'Additional tax filing': '1484663456',
   'Per check': '1702983428',
+  'Per check (weekly)': '25020703329',
+  'Per check (biweekly)': '25020703332  ',
+  'Per check (semi-monthly)': '25020641418',
+  'Per check (monthly)': '25020703336',
   'Base Fee': '1702983429',
   'Onboarding Per New Hire (HHA Industry)': '1442562842',
   'Payroll Base Fee': '1561785514'
@@ -198,17 +202,6 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
 
     let unitCost = product.price || 0;
   
-    if (id === productIdMap['Per check']) {
-      const multiplierMap = {
-        weekly: 52,
-        biweekly: 26,
-        semimonthly: 24,
-        monthly: 12,
-      };
-      const multiplier = multiplierMap[payrollFreq] || 1;
-      unitCost *= multiplier;
-    }
-  
     return {
       name: product.name,
       unitCost,
@@ -227,7 +220,24 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
       switch (product) {
         case 'Payroll': {
           if (payrollType === 'per_check') {
-            items.push(getProduct(productIdMap['Per check'], numEmployees));
+            let perCheckProductId;
+            switch (payrollFreq) {
+              case 'weekly':
+                perCheckProductId = productIdMap['Per check (weekly)'];
+                break;
+              case 'biweekly':
+                perCheckProductId = productIdMap['Per check (biweekly)'];
+                break;
+              case 'semimonthly':
+                perCheckProductId = productIdMap['Per check (semi-monthly)'];
+                break;
+              case 'monthly':
+                perCheckProductId = productIdMap['Per check (monthly)'];
+                break;
+              default:
+                perCheckProductId = productIdMap['Per check'];
+            }
+            items.push(getProduct(perCheckProductId, numEmployees));
             items.push(getProduct(productIdMap['Base Fee'], 1));
           } else {
             items.push(getProduct(productIdMap['Payroll'], numEmployees));
