@@ -202,6 +202,17 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
 
     let unitCost = product.price || 0;
   
+    if (id === productIdMap['Per check']) {
+      const multiplierMap = {
+        weekly: 52,
+        biweekly: 26,
+        semimonthly: 24,
+        monthly: 12,
+      };
+      const multiplier = multiplierMap[payrollFreq] || 1;
+      unitCost *= multiplier;
+    }
+  
     return {
       name: product.name,
       unitCost,
