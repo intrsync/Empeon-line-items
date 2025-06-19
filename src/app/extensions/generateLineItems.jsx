@@ -63,7 +63,7 @@ const productIdMap = {
   'Additional tax filing': '1484663456',
   'Per check': '1702983428',
   'Per check (weekly)': '25020703329',
-  'Per check (biweekly)': '25020703332  ',
+  'Per check (biweekly)': '25020703332',
   'Per check (semi-monthly)': '25020641418',
   'Per check (monthly)': '25020703336',
   'Base Fee': '1702983429',
