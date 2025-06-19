@@ -9,7 +9,6 @@ exports.main = async (context = {}) => {
   });
 
   try {
-
     if (!dealId || !Array.isArray(lineItems) || lineItems.length === 0) {
       return { success: false, message: 'Missing dealId or lineItems.' };
     }
@@ -17,19 +16,36 @@ exports.main = async (context = {}) => {
     console.log(lineItems)
     console.log('exclude_from_total', lineItems[0].exclude_from_total)
 
+    // Delete existing line items associated with the deal first
+    const associationResp = await hubspotClient.crm.deals.associationsApi.getAll(dealId, 'line_items');
+    const existingLineItemIds = associationResp.results.map(r => r.id);
+    if (existingLineItemIds.length > 0) {
+      const deletePayload = {
+        inputs: existingLineItemIds.map(id => ({ id })),
+      };
+      await axios.post(
+        'https://api.hubapi.com/crm/v3/objects/line_items/batch/archive',
+        deletePayload,
+        {
+          headers: {
+            Authorization: `Bearer ${process.env['PRIVATE_APP_ACCESS_TOKEN']}`,
+            'Content-Type': 'application/json',
+          }
+        }
+      );
+    }
 
-
-    const inputs = lineItems.map((item) => ({
+    // Batch create line items in order
+    const batchInputs = lineItems.map((item, idx) => ({
       properties: {
         name: item.name,
         quantity: item.quantity?.toString() || '1',
         price: (item.exclude_from_total === true || item.exclude_from_total === 'true') ? '0' : String(item.unitCost ?? item.price ?? 0),
         display_price: item.unitCost?.toString() || item.price || '0',
         hs_product_id: item.productId,
-        //       hs_pricing_model: 'flat',
-        // ...(item.frequency?.toLowerCase() !== 'one_time'
-        //   ? { recurringbillingfrequency: item.frequency.toLowerCase() }
-        //   : {}),
+        hs_position_on_quote: idx.toString(),
+        // hs_pricing_model: 'flat',
+        // ...(item.frequency?.toLowerCase() !== 'one_time' ? { recurringbillingfrequency: item.frequency.toLowerCase() } : {}),
       },
       associations: [
         {
@@ -43,9 +59,10 @@ exports.main = async (context = {}) => {
         }
       ]
     }));
-    const createResp = await axios.post(
+
+    const resp = await axios.post(
       'https://api.hubapi.com/crm/v3/objects/line_items/batch/create',
-      { inputs },
+      { inputs: batchInputs },
       {
         headers: {
           Authorization: `Bearer ${process.env['PRIVATE_APP_ACCESS_TOKEN']}`,
@@ -54,35 +71,14 @@ exports.main = async (context = {}) => {
       }
     );
 
-    const createdLineItems = createResp.data.results;
-    const associationResp = await hubspotClient.crm.deals.associationsApi.getAll(dealId, 'line_items');
-    const existingLineItemIds = associationResp.results
-      .map(r => r.id)
-      .filter(id => !createdLineItems.some(item => item.id === id));
-
-    if (existingLineItemIds.length > 0) {
-      const deletePayload = {
-        inputs: existingLineItemIds.map(id => ({ id })),
-      };
-
-      await axios.post(
-        'https://api.hubapi.com/crm/v3/objects/line_items/batch/archive',
-        deletePayload,
-        {
-          headers: {
-            Authorization: `Bearer ${process.env['PRIVATE_APP_ACCESS_TOKEN']}`,
-            'Content-Type': 'application/json',
-          }
-        }
-      );
-    }
+    const createdLineItems = resp.data.results?.map(r => ({
+      id: r.id,
+      name: r.properties?.name
+    })) || [];
 
     return {
       success: true,
-      created: createdLineItems.map(item => ({
-        id: item.id,
-        name: item.properties?.name
-      })),
+      created: createdLineItems,
     };
 
   } catch (err) {
