@@ -224,10 +224,27 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
     };
   };
   
+  const postAcaItems = [];
+  const preAcaItems = [];
+
   useEffect(() => {
     const items = [];
   
-    for (const product of selectedProducts) {
+    // Enforce a fixed order regardless of selection order
+    const orderedProducts = [
+      'Payroll',
+      'HR',
+      'Time and Attendance',
+      'Scheduling',
+      'Advanced Benefits',
+      'ACA Administration',
+      'Onboarding New Hire (HHA Industry)',
+      'IVR'
+    ];
+  
+    for (const product of orderedProducts) {
+      if (!selectedProducts.includes(product)) continue;
+  
       switch (product) {
         case 'Payroll': {
           if (payrollType === 'per_check') {
@@ -254,25 +271,12 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
             items.push(getProduct(productIdMap['Payroll'], numEmployees));
             items.push(getProduct(productIdMap['Payroll Base Fee'], 1));
           }
-        
-          items.push(getProduct(productIdMap['1095'], 1));
-          items.push(getProduct(productIdMap['W2/1099'], 1));
-          items.push(getProduct(productIdMap['Garnishment'], 1));
-          items.push(getProduct(productIdMap['New Hire Reporting'], 1));
-          break;
-        }
-        
   
-        case 'ACA Administration': {
-          items.push(getProduct(productIdMap['Benefits & ACA Base Fee'], 1));
-          items.push(getProduct(productIdMap['Benefits & ACA Administration'], numEmployees));
-          break;
-        }
-  
-        case 'Advanced Benefits': {
-          items.push(getProduct(productIdMap['Advanced Benefits Base Fee'], 1));
-          items.push(getProduct(productIdMap['Advanced Benefits & ACA'], numEmployees));
-          break;
+          postAcaItems.push(getProduct(productIdMap['New Hire Reporting'], 1));
+          postAcaItems.push(getProduct(productIdMap['Garnishment'], 1));
+  postAcaItems.push(getProduct(productIdMap['1095'], 1));
+          postAcaItems.push(getProduct(productIdMap['W2/1099'], 1));
+  break;
         }
   
         case 'HR': {
@@ -281,12 +285,27 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
           break;
         }
   
+        case 'ACA Administration': {
+          items.push(getProduct(productIdMap['Benefits & ACA Administration'], numEmployees));
+          items.push(getProduct(productIdMap['Benefits & ACA Base Fee'], 1));
+          items.push(...preAcaItems);
+          items.push(...postAcaItems);
+  break;
+        }
+  
+        case 'Advanced Benefits': {
+          items.push(getProduct(productIdMap['Advanced Benefits & ACA'], numEmployees));
+          items.push(getProduct(productIdMap['Advanced Benefits Base Fee'], 1));
+          break;
+        }
+  
         case 'Scheduling': {
-          const schedulingQty = schedulingBillType === 'per_location'
-            ? numLocations
-            : schedulingBillType === 'per_employee'
-            ? numEmployees
-            : 1;
+          const schedulingQty =
+            schedulingBillType === 'per_location'
+              ? numLocations
+              : schedulingBillType === 'per_employee'
+              ? numEmployees
+              : 1;
   
           items.push(getProduct(productIdMap['Scheduling Base Fee'], 1));
           items.push(getProduct(productIdMap['Scheduling'], schedulingQty));
@@ -297,10 +316,10 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
         case 'Time and Attendance': {
           const clockTotal = numAdvClocks + numStdClocks;
           items.push(getProduct(productIdMap['Time and Attendance Base Fee'], 1));
-          items.push(getProduct(productIdMap['Clock Configuration'], clockTotal));
-          items.push(getProduct(productIdMap['Clock Hosting'], clockTotal));
-          items.push(getProduct(productIdMap['Advanced Clock'], numAdvClocks));
-          items.push(getProduct(productIdMap['Standard Clock'], numStdClocks));
+          postAcaItems.push(getProduct(productIdMap['Clock Configuration'], clockTotal));
+          postAcaItems.push(getProduct(productIdMap['Standard Clock'], numStdClocks));
+          postAcaItems.push(getProduct(productIdMap['Advanced Clock'], numAdvClocks));
+          preAcaItems.push(getProduct(productIdMap['Clock Hosting'], clockTotal));
           break;
         }
   
@@ -324,8 +343,8 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
       }
     }
   
-    // Filter out any nulls from invalid product IDs
-    setLineItems(items.filter(Boolean));
+    const validItems = items.filter(item => item && typeof item.name === 'string');
+    setLineItems(validItems);
   }, [
     selectedProducts,
     numEmployees,
@@ -338,7 +357,7 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
     payrollFreq,
     schedulingBillType
   ]);
-
+  
   const generateLineItems = useCallback(async () => {
     try {
       setLoading(true);
