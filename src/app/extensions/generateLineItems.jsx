@@ -55,6 +55,7 @@ const productIdMap = {
   'Scheduling': '1788055941',
   'Scheduling Base Fee': '2274030005',
   'Scheduling Per Employee': '1788055941',
+  'Scheduling Location': '22248006796',
   'Scheduling Implementation': '2170246315',
   'Time & Attendance': '1442527620',
   'Time and Attendance Base Fee': '1442553931',
@@ -74,7 +75,7 @@ const productIdMap = {
 const productMap = {
   'Payroll': ['Payroll'],
   'ACA Administration': ['Benefits & ACA Base Fee', 'Benefits & ACA Administration'],
-  'Advanced Benefits': ['Benefits & ACA Base Fee' ,'Advanced Benefits & ACA'],
+  'Advanced Benefits': ['Benefits & ACA Base Fee', 'Advanced Benefits & ACA'],
   'HR': ['HR Premium', 'HR Base Fee'],
   'Scheduling': ['Scheduling', 'Scheduling Implementation', 'Scheduling Base Fee', 'Scheduling Location'],
   'Time and Attendance': ['Time and Attendance Base Fee', 'Time & Attendance', 'Clock Configuration', 'Clock Hosting', 'Advanced Clock', 'Standard Clock'],
@@ -108,20 +109,20 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
           name: 'fetch-products',
           parameters: {},
         });
-    
+
         if (res?.response?.success) {
 
           setProducts(res.response.products.map(p => ({
             ...p,
             price: parseFloat(p.price || 0),
-        }))); 
+          })));
         } else {
           console.error('Serverless response error:', res?.response?.message);
         }
       } catch (err) {
         console.error('Serverless call failed:', err);
       }
-    }    
+    }
 
     fetchProducts();
   }, [context, runServerless]);
@@ -201,7 +202,7 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
     if (!product) return null;
 
     let unitCost = product.price || 0;
-  
+
     if (id === productIdMap['Per check']) {
       const multiplierMap = {
         weekly: 52,
@@ -212,7 +213,7 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
       const multiplier = multiplierMap[payrollFreq] || 1;
       unitCost *= multiplier;
     }
-  
+
     return {
       name: product.name,
       unitCost,
@@ -223,13 +224,13 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
       exclude_from_total: product.exclude_from_total || 'false',
     };
   };
-  
+
   const postAcaItems = [];
   const preAcaItems = [];
 
   useEffect(() => {
     const items = [];
-  
+
     // Enforce a fixed order regardless of selection order
     const orderedProducts = [
       'Payroll',
@@ -241,10 +242,10 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
       'Onboarding New Hire (HHA Industry)',
       'IVR'
     ];
-  
+
     for (const product of orderedProducts) {
       if (!selectedProducts.includes(product)) continue;
-  
+
       switch (product) {
         case 'Payroll': {
           if (payrollType === 'per_check') {
@@ -271,48 +272,48 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
             items.push(getProduct(productIdMap['Payroll'], numEmployees));
             items.push(getProduct(productIdMap['Payroll Base Fee'], 1));
           }
-  
+
           postAcaItems.push(getProduct(productIdMap['New Hire Reporting'], 1));
           postAcaItems.push(getProduct(productIdMap['Garnishment'], 1));
-  postAcaItems.push(getProduct(productIdMap['1095'], 1));
+          postAcaItems.push(getProduct(productIdMap['1095'], 1));
           postAcaItems.push(getProduct(productIdMap['W2/1099'], 1));
-  break;
+          break;
         }
-  
+
         case 'HR': {
           items.push(getProduct(productIdMap['HR Premium'], numOfficeEmployees));
           items.push(getProduct(productIdMap['HR Base Fee'], 1));
           break;
         }
-  
+
         case 'ACA Administration': {
           items.push(getProduct(productIdMap['Benefits & ACA Administration'], numEmployees));
           items.push(getProduct(productIdMap['Benefits & ACA Base Fee'], 1));
           items.push(...preAcaItems);
           items.push(...postAcaItems);
-  break;
+          break;
         }
-  
+
         case 'Advanced Benefits': {
           items.push(getProduct(productIdMap['Advanced Benefits & ACA'], numEmployees));
           items.push(getProduct(productIdMap['Advanced Benefits Base Fee'], 1));
           break;
         }
-  
+
         case 'Scheduling': {
-          const schedulingQty =
-            schedulingBillType === 'per_location'
-              ? numLocations
-              : schedulingBillType === 'per_employee'
-              ? numEmployees
-              : 1;
-  
-          items.push(getProduct(productIdMap['Scheduling Base Fee'], 1));
-          items.push(getProduct(productIdMap['Scheduling'], schedulingQty));
-          items.push(getProduct(productIdMap['Scheduling Location'], numLocations));
+
+          if (schedulingBillType === 'per_location') {
+            items.push(getProduct(productIdMap['Scheduling Implementation'], 1));
+            items.push(getProduct(productIdMap['Scheduling Location'], numLocations));
+          } else if (schedulingBillType === 'per_employee') {
+            items.push(getProduct(productIdMap['Scheduling'], numLocations));
+            items.push(getProduct(productIdMap['Scheduling Base Fee'], 1));
+            items.push(getProduct(productIdMap['Scheduling Implementation'], 1));
+          }
           break;
         }
-  
+
+
         case 'Time and Attendance': {
           const clockTotal = numAdvClocks + numStdClocks;
           items.push(getProduct(productIdMap['Time and Attendance Base Fee'], 1));
@@ -322,18 +323,18 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
           preAcaItems.push(getProduct(productIdMap['Clock Hosting'], clockTotal));
           break;
         }
-  
+
         case 'Onboarding New Hire (HHA Industry)': {
           items.push(getProduct(productIdMap['Onboarding Per New Hire (HHA Industry)'], 1));
           break;
         }
-  
+
         case 'IVR': {
           items.push(getProduct(productIdMap['IVR-Set UP'], 1));
           items.push(getProduct(productIdMap['IVR - Per employee ($50 base fee)'], numIvrEmployees));
           break;
         }
-  
+
         default: {
           const productNames = productMap[product] || [];
           for (const name of productNames) {
@@ -342,7 +343,7 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
         }
       }
     }
-  
+
     const validItems = items.filter(item => item && typeof item.name === 'string');
     setLineItems(validItems);
   }, [
@@ -357,7 +358,7 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
     payrollFreq,
     schedulingBillType
   ]);
-  
+
   const generateLineItems = useCallback(async () => {
     try {
       setLoading(true);
@@ -372,7 +373,7 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
           })),
         }
       });
-      
+
 
       console.log('resp', resp);
 
@@ -381,7 +382,7 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
         message: `Successfully added ${lineItems.length} item(s).`,
         type: "success",
       });
-      
+
       refreshProperties();
     } catch (error) {
       console.error('Error generating line items:', error);
@@ -399,15 +400,15 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
   return (
     <Flex direction="column" gap="medium">
       <MultiSelect
-  name="products"
-  label="Products"
-  options={productDropdownOptions}
-  value={selectedProducts.filter(p => productDropdownOptions.some(opt => opt.value === p))}
-  onChange={(val) => {
-    const hubspotValues = val.map(p => crmValueMap[p]).filter(Boolean);
-    updatePropertyValue('line_item_products', hubspotValues.join(';'));
-  }}
-/>
+        name="products"
+        label="Products"
+        options={productDropdownOptions}
+        value={selectedProducts.filter(p => productDropdownOptions.some(opt => opt.value === p))}
+        onChange={(val) => {
+          const hubspotValues = val.map(p => crmValueMap[p]).filter(Boolean);
+          updatePropertyValue('line_item_products', hubspotValues.join(';'));
+        }}
+      />
 
       {selectedProducts.length > 0 && (
         <Tile compact>
@@ -591,43 +592,43 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
 
       {lineItems.length > 0 ? (
         <Table bordered={false} paginated={false}>
-        <TableHead>
-          <TableRow style={{ backgroundColor: '#2c2f66' }}>
-            <TableHeader style={{ color: 'white' }}>ITEM</TableHeader>
-            <TableHeader style={{ color: 'white' }}>PRICE</TableHeader>
-            <TableHeader style={{ color: 'white' }}>QTY</TableHeader>
-            <TableHeader style={{ color: 'white' }}>TOTAL</TableHeader>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {lineItems.map((item, idx) => (
-            <TableRow key={idx} style={{ backgroundColor: idx % 2 === 0 ? '#f8f9fa' : '#ffffff' }}>
-              <TableCell style={{ fontWeight: 'bold' }}>
-                {item.productId ? (
-                  <CrmActionLink
-                    actionType="PREVIEW_OBJECT"
-                    actionContext={{
-                      objectTypeId: "0-7", // HubSpot Product object type ID
-                      objectId: item.productId,
-                    }}
-                  >
-                    {item.name || 'Unnamed Product'}
-                  </CrmActionLink>
-                ) : (
-                  item.name || 'Unnamed Product'
-                )}
-              </TableCell>
-              <TableCell>
-                ${parseFloat(item.unitCost).toFixed(2)}/{(item.frequency === 'one_time' ? 'One Time' : item.frequency.charAt(0).toUpperCase() + item.frequency.slice(1))}
-              </TableCell>
-              <TableCell>{item.quantity}</TableCell>
-              <TableCell>
-                ${parseFloat(item.amount).toFixed(2)}/{(item.frequency === 'one_time' ? 'One Time' : item.frequency.charAt(0).toUpperCase() + item.frequency.slice(1))}
-              </TableCell>
+          <TableHead>
+            <TableRow style={{ backgroundColor: '#2c2f66' }}>
+              <TableHeader style={{ color: 'white' }}>ITEM</TableHeader>
+              <TableHeader style={{ color: 'white' }}>PRICE</TableHeader>
+              <TableHeader style={{ color: 'white' }}>QTY</TableHeader>
+              <TableHeader style={{ color: 'white' }}>TOTAL</TableHeader>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>      
+          </TableHead>
+          <TableBody>
+            {lineItems.map((item, idx) => (
+              <TableRow key={idx} style={{ backgroundColor: idx % 2 === 0 ? '#f8f9fa' : '#ffffff' }}>
+                <TableCell style={{ fontWeight: 'bold' }}>
+                  {item.productId ? (
+                    <CrmActionLink
+                      actionType="PREVIEW_OBJECT"
+                      actionContext={{
+                        objectTypeId: "0-7", // HubSpot Product object type ID
+                        objectId: item.productId,
+                      }}
+                    >
+                      {item.name || 'Unnamed Product'}
+                    </CrmActionLink>
+                  ) : (
+                    item.name || 'Unnamed Product'
+                  )}
+                </TableCell>
+                <TableCell>
+                  ${parseFloat(item.unitCost).toFixed(2)}/{(item.frequency === 'one_time' ? 'One Time' : item.frequency.charAt(0).toUpperCase() + item.frequency.slice(1))}
+                </TableCell>
+                <TableCell>{item.quantity}</TableCell>
+                <TableCell>
+                  ${parseFloat(item.amount).toFixed(2)}/{(item.frequency === 'one_time' ? 'One Time' : item.frequency.charAt(0).toUpperCase() + item.frequency.slice(1))}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       ) : (
         <EmptyState
           title="Nothing here yet"
