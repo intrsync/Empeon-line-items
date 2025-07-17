@@ -69,7 +69,9 @@ const productIdMap = {
   'Per check (monthly)': '25020703336',
   'Base Fee': '1702983429',
   'Onboarding Per New Hire (HHA Industry)': '1442562842',
-  'Payroll Base Fee': '1561785514'
+  'Payroll Base Fee': '1561785514',
+  'W2 Base Fee': '26170155150',
+  '1095 Base Fee': '26170155151'
 };
 
 const productMap = {
@@ -269,6 +271,7 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
             items.push(getProduct(perCheckProductId, numEmployees));
             items.push(getProduct(productIdMap['Base Fee'], numEmployees));
             items.push(getProduct(productIdMap['W2/1099'], 1));
+            items.push(getProduct(productIdMap['W2 Base Fee'], numEmployees));
             items.push(getProduct(productIdMap['Additional tax filing'], 1));
             items.push(getProduct(productIdMap['New Hire Reporting'], 1));
             items.push(getProduct(productIdMap['Garnishment'], 1));
@@ -279,6 +282,7 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
             items.push(getProduct(productIdMap['Payroll'], numEmployees));
             items.push(getProduct(productIdMap['Payroll Base Fee'], numEmployees));
             items.push(getProduct(productIdMap['W2/1099'], 1));
+            items.push(getProduct(productIdMap['W2 Base Fee'], numEmployees));
             items.push(getProduct(productIdMap['Additional tax filing'], 1));
             items.push(getProduct(productIdMap['New Hire Reporting'], 1));
             items.push(getProduct(productIdMap['Garnishment'], 1));
@@ -299,6 +303,7 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
           items.push(getProduct(productIdMap['Benefits & ACA Administration'], numEmployees));
           items.push(getProduct(productIdMap['Benefits & ACA Base Fee'], 1));
           items.push(getProduct(productIdMap['1095'], 1));
+          items.push(getProduct(productIdMap['1095 Base Fee'], numEmployees));
           break;
         }
 
@@ -326,10 +331,10 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
           const clockTotal = numAdvClocks + numStdClocks;
           items.push(getProduct(productIdMap['Time & Attendance'], 1));
           items.push(getProduct(productIdMap['Time and Attendance Base Fee'], numEmployees));
-          items.push(getProduct(productIdMap['Clock Configuration'], clockTotal));
           items.push(getProduct(productIdMap['Standard Clock'], numStdClocks));
           items.push(getProduct(productIdMap['Advanced Clock'], numAdvClocks));
           items.push(getProduct(productIdMap['Clock Hosting'], clockTotal));
+          items.push(getProduct(productIdMap['Clock Configuration'], clockTotal));
           break;
         }
 
