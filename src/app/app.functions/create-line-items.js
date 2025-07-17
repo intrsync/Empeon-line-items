@@ -35,6 +35,21 @@ exports.main = async (context = {}) => {
       );
     }
 
+    // List of product names for which approve_when_discounted should be true
+    const approveWhenDiscountedProducts = [
+      'W2/1099',
+      '1095',
+      'Tax Filing',
+      'Scheduling Base Fee',
+      'Scheduling',
+      'Per check (monthly)',
+      'Per check (semi-monthly)',
+      'Per check (weekly)',
+      'Per check (bi-weekly)',
+      'Time & Attendance',
+      'HR Premium'
+    ];
+
     // Batch create line items in order
     const batchInputs = lineItems.map((item, idx) => ({
       properties: {
@@ -44,6 +59,7 @@ exports.main = async (context = {}) => {
         display_price: item.unitCost?.toString() || item.price || '0',
         hs_product_id: item.productId,
         hs_position_on_quote: idx.toString(),
+        approve_when_discounted: approveWhenDiscountedProducts.includes(item.name),
         // hs_pricing_model: 'flat',
         // ...(item.frequency?.toLowerCase() !== 'one_time' ? { recurringbillingfrequency: item.frequency.toLowerCase() } : {}),
       },
