@@ -267,16 +267,25 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
                 perCheckProductId = productIdMap['Per check'];
             }
             items.push(getProduct(perCheckProductId, numEmployees));
-            items.push(getProduct(productIdMap['Base Fee'], 1));
+            items.push(getProduct(productIdMap['Base Fee'], numEmployees));
+            items.push(getProduct(productIdMap['W2/1099'], 1));
+            items.push(getProduct(productIdMap['Additional tax filing'], 1));
+            items.push(getProduct(productIdMap['New Hire Reporting'], 1));
+            items.push(getProduct(productIdMap['Garnishment'], 1));
+            items.push(getProduct(productIdMap['Professional Services Per Hour'], 1));
+            items.push(getProduct(productIdMap['Initial Implementation'], 1));
+            items.push(getProduct(productIdMap['Additional Implementation'], 1));
           } else {
             items.push(getProduct(productIdMap['Payroll'], numEmployees));
-            items.push(getProduct(productIdMap['Payroll Base Fee'], 1));
+            items.push(getProduct(productIdMap['Payroll Base Fee'], numEmployees));
+            items.push(getProduct(productIdMap['W2/1099'], 1));
+            items.push(getProduct(productIdMap['Additional tax filing'], 1));
+            items.push(getProduct(productIdMap['New Hire Reporting'], 1));
+            items.push(getProduct(productIdMap['Garnishment'], 1));
+            items.push(getProduct(productIdMap['Professional Services Per Hour'], 1));
+            items.push(getProduct(productIdMap['Initial Implementation'], 1));
+            items.push(getProduct(productIdMap['Additional Implementation'], 1));
           }
-
-          postAcaItems.push(getProduct(productIdMap['New Hire Reporting'], 1));
-          postAcaItems.push(getProduct(productIdMap['Garnishment'], 1));
-          postAcaItems.push(getProduct(productIdMap['1095'], 1));
-          postAcaItems.push(getProduct(productIdMap['W2/1099'], 1));
           break;
         }
 
@@ -289,8 +298,7 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
         case 'ACA Administration': {
           items.push(getProduct(productIdMap['Benefits & ACA Administration'], numEmployees));
           items.push(getProduct(productIdMap['Benefits & ACA Base Fee'], 1));
-          items.push(...preAcaItems);
-          items.push(...postAcaItems);
+          items.push(getProduct(productIdMap['1095'], 1));
           break;
         }
 
@@ -307,7 +315,7 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
             items.push(getProduct(productIdMap['Scheduling Location'], numLocations));
           } else if (schedulingBillType === 'per_employee') {
             items.push(getProduct(productIdMap['Scheduling'], numLocations));
-            items.push(getProduct(productIdMap['Scheduling Base Fee'], 1));
+            items.push(getProduct(productIdMap['Scheduling Base Fee'], numLocations));
             items.push(getProduct(productIdMap['Scheduling Implementation'], 1));
           }
           break;
@@ -316,11 +324,12 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
 
         case 'Time and Attendance': {
           const clockTotal = numAdvClocks + numStdClocks;
-          items.push(getProduct(productIdMap['Time and Attendance Base Fee'], 1));
-          postAcaItems.push(getProduct(productIdMap['Clock Configuration'], clockTotal));
-          postAcaItems.push(getProduct(productIdMap['Standard Clock'], numStdClocks));
-          postAcaItems.push(getProduct(productIdMap['Advanced Clock'], numAdvClocks));
-          preAcaItems.push(getProduct(productIdMap['Clock Hosting'], clockTotal));
+          items.push(getProduct(productIdMap['Time & Attendance'], 1));
+          items.push(getProduct(productIdMap['Time and Attendance Base Fee'], numEmployees));
+          items.push(getProduct(productIdMap['Clock Configuration'], clockTotal));
+          items.push(getProduct(productIdMap['Standard Clock'], numStdClocks));
+          items.push(getProduct(productIdMap['Advanced Clock'], numAdvClocks));
+          items.push(getProduct(productIdMap['Clock Hosting'], clockTotal));
           break;
         }
 
