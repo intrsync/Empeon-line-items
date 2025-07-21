@@ -269,9 +269,9 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
                 perCheckProductId = productIdMap['Per check'];
             }
             items.push(getProduct(perCheckProductId, numEmployees));
-            items.push(getProduct(productIdMap['Base Fee'], numEmployees));
+            items.push(getProduct(productIdMap['Base Fee'], numLocations));
             items.push(getProduct(productIdMap['W2/1099'], 1));
-            items.push(getProduct(productIdMap['W2 Base Fee'], numEmployees));
+            items.push(getProduct(productIdMap['W2 Base Fee'], numLocations));
             items.push(getProduct(productIdMap['Additional tax filing'], 1));
             items.push(getProduct(productIdMap['New Hire Reporting'], 1));
             items.push(getProduct(productIdMap['Garnishment'], 1));
@@ -280,9 +280,9 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
             items.push(getProduct(productIdMap['Additional Implementation'], 1));
           } else {
             items.push(getProduct(productIdMap['Payroll'], numEmployees));
-            items.push(getProduct(productIdMap['Payroll Base Fee'], numEmployees));
+            items.push(getProduct(productIdMap['Payroll Base Fee'], numLocations));
             items.push(getProduct(productIdMap['W2/1099'], 1));
-            items.push(getProduct(productIdMap['W2 Base Fee'], numEmployees));
+            items.push(getProduct(productIdMap['W2 Base Fee'], numLocations));
             items.push(getProduct(productIdMap['Additional tax filing'], 1));
             items.push(getProduct(productIdMap['New Hire Reporting'], 1));
             items.push(getProduct(productIdMap['Garnishment'], 1));
@@ -295,21 +295,21 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
 
         case 'HR': {
           items.push(getProduct(productIdMap['HR Premium'], numOfficeEmployees));
-          items.push(getProduct(productIdMap['HR Base Fee'], 1));
+          items.push(getProduct(productIdMap['HR Base Fee'], numLocations));
           break;
         }
 
         case 'ACA Administration': {
           items.push(getProduct(productIdMap['Benefits & ACA Administration'], numEmployees));
-          items.push(getProduct(productIdMap['Benefits & ACA Base Fee'], 1));
+          items.push(getProduct(productIdMap['Benefits & ACA Base Fee'], numLocations));
           items.push(getProduct(productIdMap['1095'], 1));
-          items.push(getProduct(productIdMap['1095 Base Fee'], numEmployees));
+          items.push(getProduct(productIdMap['1095 Base Fee'], numLocations));
           break;
         }
 
         case 'Advanced Benefits': {
           items.push(getProduct(productIdMap['Advanced Benefits & ACA'], numEmployees));
-          items.push(getProduct(productIdMap['Advanced Benefits Base Fee'], 1));
+          items.push(getProduct(productIdMap['Advanced Benefits Base Fee'], numLocations));
           break;
         }
 
@@ -330,7 +330,7 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
         case 'Time and Attendance': {
           const clockTotal = numAdvClocks + numStdClocks;
           items.push(getProduct(productIdMap['Time & Attendance'], 1));
-          items.push(getProduct(productIdMap['Time and Attendance Base Fee'], numEmployees));
+          items.push(getProduct(productIdMap['Time and Attendance Base Fee'], numLocations));
           items.push(getProduct(productIdMap['Standard Clock'], numStdClocks));
           items.push(getProduct(productIdMap['Advanced Clock'], numAdvClocks));
           items.push(getProduct(productIdMap['Clock Hosting'], clockTotal));
@@ -345,7 +345,7 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
 
         case 'IVR': {
           items.push(getProduct(productIdMap['IVR-Set UP'], 1));
-          items.push(getProduct(productIdMap['IVR - Per employee ($50 base fee)'], numIvrEmployees));
+          items.push(getProduct(productIdMap['IVR - Per employee ($50 base fee)'], numLocations));
           break;
         }
 
@@ -495,6 +495,8 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
 
                     )}
 
+                    
+
                   {(selectedProducts.includes('HR') ||
                     selectedProducts.includes('Time and Attendance')) &&
                     field(
@@ -527,8 +529,15 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
                       />
                     )}
 
-                  {selectedProducts.includes('Scheduling') &&
-                    schedulingBillType === 'per_location' &&
+                  {(
+                    selectedProducts.includes('Scheduling') && schedulingBillType === 'per_location' ||
+                    selectedProducts.includes('Time and Attendance') ||
+                    selectedProducts.includes('IVR') ||
+                    selectedProducts.includes('Payroll') ||
+                    selectedProducts.includes('ACA Administration') ||
+                    selectedProducts.includes('Advanced Benefits') ||
+                    selectedProducts.includes('HR')
+                  ) &&
                     field(
                       'numLocations',
                       <NumberInput
@@ -539,7 +548,6 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
                           updatePropertyValue('number_of_eins', val);
                         }}
                       />
-
                     )}
 
                   {selectedProducts.includes('Time and Attendance') &&
