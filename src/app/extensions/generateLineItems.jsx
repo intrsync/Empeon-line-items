@@ -320,7 +320,7 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
             items.push(getProduct(productIdMap['Scheduling Implementation'], 1));
             items.push(getProduct(productIdMap['Scheduling Location'], numLocations));
           } else if (schedulingBillType === 'per_employee') {
-            items.push(getProduct(productIdMap['Scheduling'], numLocations));
+            items.push(getProduct(productIdMap['Scheduling'], numEmployees));
             items.push(getProduct(productIdMap['Scheduling Base Fee'], numLocations));
             items.push(getProduct(productIdMap['Scheduling Implementation'], 1));
           }
@@ -531,7 +531,7 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
                     )}
 
                   {(
-                    selectedProducts.includes('Scheduling') && schedulingBillType === 'per_location' ||
+                    selectedProducts.includes('Scheduling') ||
                     selectedProducts.includes('Time and Attendance') ||
                     selectedProducts.includes('IVR') ||
                     selectedProducts.includes('Payroll') ||
