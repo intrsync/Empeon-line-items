@@ -139,7 +139,8 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
       "no__of_standard_clocks_requested",
       "num_ivr_employees",
       "payroll_type",
-      "payroll_frequency"
+      "payroll_frequency",
+      "scheduling_bill_type"
     ]).then((props) => setProperties(props));
 
     onPropertyUpdate([
