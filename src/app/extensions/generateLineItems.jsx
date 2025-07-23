@@ -287,7 +287,7 @@ const LineItemForm = ({ context, runServerless, fetchProperties, sendAlert, onPr
             items.push(getProduct(productIdMap['Additional tax filing'], 1));
             items.push(getProduct(productIdMap['New Hire Reporting'], 1));
             items.push(getProduct(productIdMap['Garnishment'], 1));
-            items.push(getProduct(productIdMap['Professional Services Per Hour'], 1));
+            items.push(getProduct(productIdMap['Professional Services Per Hour'], 0));
             items.push(getProduct(productIdMap['Initial Implementation'], 1));
             items.push(getProduct(productIdMap['Additional Implementation'], 1));
           }
